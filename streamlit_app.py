@@ -1,1 +1,1 @@
-created the main python file
+print("my name is rikesh")
