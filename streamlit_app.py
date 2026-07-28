@@ -131,14 +131,26 @@ def main():
             )
             if resp.status_code in (200, 201):
                 data = resp.json()
-                pos_id = data.get("position_id", "")
-                if pos_id == "":
-                    # position_id missing from response - log the raw body so we can see the real structure
-                    print(f"OK (status {resp.status_code}) but 'position_id' key not found in response!")
-                    print(f"  RAW RESPONSE: {json.dumps(data)[:500]}")
+                # /api/router likely does NOT return "position_id" (that was specific to the old,
+                # incorrect /dimension/router/position/create endpoint). Try a few common ID key
+                # names instead, and fall back to showing the raw response if none match.
+                record_id = ""
+                for key in ("id", "router_id", "device_id", "position_id"):
+                    if key in data:
+                        record_id = data[key]
+                        break
+
+                if record_id == "":
+                    print(f"OK (status {resp.status_code}) - no obvious ID key found in response.")
                 else:
-                    print(f"OK (status {resp.status_code}, position_id={pos_id})")
-                results.append({"name": name, "status": "success", "position_id": pos_id, "error": ""})
+                    print(f"OK (status {resp.status_code}, id={record_id})")
+
+                # Always show the raw response for the first few live rows so we can confirm the
+                # real response shape before trusting the rest of the batch.
+                if i <= 3:
+                    print(f"  RAW RESPONSE: {json.dumps(data)[:500]}")
+
+                results.append({"name": name, "status": "success", "position_id": record_id, "error": ""})
             else:
                 print(f"FAILED (status {resp.status_code})")
                 results.append({"name": name, "status": f"http_{resp.status_code}", "position_id": "", "error": resp.text[:300]})
@@ -161,4 +173,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
